@@ -18,7 +18,7 @@ tmux new-session -d -s padawan
 # RUN roslaunch turtlebot3_gazebo turtlebot3_empty_world.launch
 # Screen 0: gazebo
 tmux rename-window -t padawan:0 gazebo
-tmux send-keys -t padawan:0 "echo roslaunch turtlebot3_gazebo turtlebot3_empty_world.launch" C-m
+tmux send-keys -t padawan:0 "roslaunch turtlebot3_gazebo turtlebot3_empty_world.launch" C-m
 
 # Screen 1: shell
 tmux new-window -t padawan:1

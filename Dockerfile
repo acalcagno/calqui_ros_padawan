@@ -64,6 +64,7 @@ USER agustin
 
 RUN yes | sudo apt-get install ros-melodic-turtlebot3
 RUN yes | sudo apt-get install ros-melodic-turtlebot3-simulations
+RUN yes | sudo apt-get install vim
 
 WORKDIR /home/agustin/padawan
 ENTRYPOINT ./setup_ws.sh
