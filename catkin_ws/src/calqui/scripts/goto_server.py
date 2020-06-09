@@ -23,7 +23,6 @@ class GoToServer:
         self._as = actionlib.SimpleActionServer('/goto_place', 
                 GoToPlaceAction, execute_cb=self.on_goal, auto_start=False)
         self._vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
-        self._fb_pub = rospy.Publisher("/goto_place/feedback", GoToPlaceFeedback, queue_size=10)
         self._cfgSrv = Server(CalquiConfig, self.cfg_callback)
         self._odom_sub = rospy.Subscriber("/odom", Odometry, self.on_odom)
         self._current_pose = Pose2D()
@@ -52,11 +51,6 @@ class GoToServer:
         self._current_pose.y = msg.pose.pose.position.y
         self._current_pose.theta = yaw
         
-        # rospy.loginfo('current pose is {}'.format(self._current_pose))
-        fb = GoToPlaceFeedback()
-        fb.distance_to_goal = self.distance_to_goal()
-        self._fb_pub.publish(fb)
-        
 
     def set_vel(self, linear_x, angular_z):
         rospy.loginfo('publishing vel')
@@ -68,6 +62,13 @@ class GoToServer:
         msg.angular.y = 0
         msg.angular.z = angular_z
         self._vel_pub.publish(msg)
+
+    def send_feedback(self):
+        # rospy.loginfo('current pose is {}'.format(self._current_pose))
+        fb = GoToPlaceFeedback()
+        fb.distance_to_goal = self.distance_to_goal()
+        self._as.publish_feedback(fb)
+
 
     def distance_to_goal(self):
         return math.sqrt(math.pow((self._goal_pose.y - self._current_pose.y),2) + math.pow((self._goal_pose.x - self._current_pose.x),2))
@@ -129,9 +130,10 @@ class GoToServer:
         wait_duration = 1
         rate = rospy.Rate(1.0/wait_duration)
 
-        while True:
+        while not self.goal_was_reached():
             vel = self.calculate_vel()
             self.set_vel(vel.linear.x, vel.angular.z)
+            self.send_feedback()
             rate.sleep()
 
         self.set_vel(0.0, 0.0)
