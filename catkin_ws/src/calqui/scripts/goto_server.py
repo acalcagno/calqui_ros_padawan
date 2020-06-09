@@ -5,6 +5,9 @@ import actionlib
 import numpy
 import math
 
+from dynamic_reconfigure.server import Server
+from calqui.cfg import CalquiConfig
+
 from calqui_msgs.msg import GoToPlaceAction
 from calqui_msgs.msg import GoToPlaceGoal
 from calqui_msgs.msg import GoToPlaceResult
@@ -21,12 +24,20 @@ class GoToServer:
                 GoToPlaceAction, execute_cb=self.on_goal, auto_start=False)
         self._vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
         self._fb_pub = rospy.Publisher("/goto_place/feedback", GoToPlaceFeedback, queue_size=10)
+        self._cfgSrv = Server(CalquiConfig, self.cfg_callback)
         self._odom_sub = rospy.Subscriber("/odom", Odometry, self.on_odom)
         self._current_pose = Pose2D()
         self._goal_pose = Pose2D()
+        self._speed = 0.5
         self._as.start()
         
         rospy.loginfo('Simple Action Server has been started')
+
+    def cfg_callback(self, config, level):
+        rospy.loginfo("""Reconfigure Request:  {calqui_SPEED}""".format(**config))
+        self._speed = config.calqui_SPEED
+
+        return config
 
     def on_shutdown(self):
         rospy.loginfo('stopping vel')  
@@ -37,7 +48,6 @@ class GoToServer:
         orientation_q = msg.pose.pose.orientation
         orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
         (roll, pitch, yaw) = euler_from_quaternion (orientation_list)
-        # rospy.loginfo('yaw:{}, x:{} y:{} z:{}'.format(round(yaw,2), round(msg.pose.pose.position.x,2),round(msg.pose.pose.position.y,2),round(msg.pose.pose.position.z,2) ))
         self._current_pose.x = msg.pose.pose.position.x
         self._current_pose.y = msg.pose.pose.position.y
         self._current_pose.theta = yaw
@@ -82,7 +92,7 @@ class GoToServer:
         if numpy.abs(self.deviation()) < 0.1 or self.goal_was_reached():
             rotation_speed = 0
         else:
-            rotation_speed = -0.1 * self.deviation()
+            rotation_speed = self._speed * -0.5 * self.deviation()
 
         rospy.loginfo('rotation_speed {}'.format(rotation_speed))
         rospy.loginfo('angle_to_goal {}, current_angle {}'.format(self.angle_to_goal(), self._current_pose.theta))
@@ -91,7 +101,7 @@ class GoToServer:
     def calculate_linear_speed(self, angular_speed):
         if self.goal_was_reached() or numpy.abs(self.deviation()) > 0.5:
             return 0
-        return 0.5
+        return self._speed
 
     def calculate_vel(self):
         # rospy.loginfo('current pose {} -> goal {}'.format(self._current_pose, self._goal_pose))
