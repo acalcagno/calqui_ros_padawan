@@ -50,23 +50,23 @@ RUN apt update && \
     ros-melodic-pcl-ros \
     ros-melodic-robot-localization \
     ros-melodic-transmission-interface \
-    ros-melodic-yocs-controllers
+    ros-melodic-yocs-controllers 
 
 # Create a user with passwordless sudo
-RUN adduser -uid 1001 --gecos "Development User" --disabled-password agustin
+RUN adduser -uid 1000 --gecos "Development User" --disabled-password agustin
 RUN adduser agustin sudo
 RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 RUN echo "export QT_X11_NO_MITSHM=1" >> /home/agustin/.bashrc
-
-RUN usermod -a -G video agustin
-RUN usermod -a -G dialout agustin
-USER agustin
 
 RUN yes | sudo apt-get install ros-melodic-turtlebot3
 RUN yes | sudo apt-get install ros-melodic-turtlebot3-simulations
 RUN yes | sudo apt-get install vim
 
-WORKDIR /home/agustin/padawan
+RUN usermod -a -G video agustin
+RUN usermod -a -G dialout agustin
+USER agustin
+
+WORKDIR /home/agustin/calqui_ros_padawan
 ENTRYPOINT ./setup_ws.sh
 
 

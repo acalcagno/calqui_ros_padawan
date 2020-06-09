@@ -24,7 +24,11 @@ tmux send-keys -t padawan:0 "roslaunch turtlebot3_gazebo turtlebot3_empty_world.
 tmux new-window -t padawan:1
 tmux rename-window -t padawan:1 'shell'
 tmux send-keys -t padawan:1 "source catkin_ws/devel/setup.bash" C-m
+tmux send-keys -t padawan:1 "rosrun calqui goto_server.py" C-m
 
+source /opt/ros/melodic/setup.bash
+
+tmux split-window -t padawan:1 -v -p 50
 
 # attach
 tmux attach
