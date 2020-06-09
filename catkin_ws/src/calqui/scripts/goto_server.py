@@ -136,6 +136,8 @@ class GoToServer:
             self.send_feedback()
             rate.sleep()
 
+
+        rospy.loginfo('goal reached!')
         self.set_vel(0.0, 0.0)
         result = GoToPlaceResult()
         result.x = self._current_pose.x
