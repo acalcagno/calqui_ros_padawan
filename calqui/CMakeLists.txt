@@ -2,10 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(calqui)
 
 find_package(catkin REQUIRED COMPONENTS
-  calqui_msgs
   dynamic_reconfigure
-  rospy
-  std_msgs
 )
 
 generate_dynamic_reconfigure_options(

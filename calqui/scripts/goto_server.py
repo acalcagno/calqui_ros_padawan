@@ -43,14 +43,12 @@ class GoToServer:
         self.set_vel(0,0)
 
     def on_odom(self, msg):
-        global roll, pitch, yaw
         orientation_q = msg.pose.pose.orientation
         orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
         (roll, pitch, yaw) = euler_from_quaternion (orientation_list)
         self._current_pose.x = msg.pose.pose.position.x
         self._current_pose.y = msg.pose.pose.position.y
         self._current_pose.theta = yaw
-        
 
     def set_vel(self, linear_x, angular_z):
         rospy.loginfo('publishing vel')
@@ -87,7 +85,7 @@ class GoToServer:
 
     # do we consider that we reached the goal
     def goal_was_reached(self):
-        return self._current_pose and self._goal_pose and self.distance_to_goal() < 0.5
+        return self._current_pose and self._goal_pose and self.distance_to_goal() < 0.5 and self.angle_to_goal < 0.5
 
     def calculate_angular_speed(self):
         if numpy.abs(self.deviation()) < 0.1 or self.goal_was_reached():
@@ -99,7 +97,7 @@ class GoToServer:
         rospy.loginfo('angle_to_goal {}, current_angle {}'.format(self.angle_to_goal(), self._current_pose.theta))
         return rotation_speed
 
-    def calculate_linear_speed(self, angular_speed):
+    def calculate_linear_speed(self):
         if self.goal_was_reached() or numpy.abs(self.deviation()) > 0.5:
             return 0
         return self._speed

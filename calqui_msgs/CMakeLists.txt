@@ -9,8 +9,6 @@ project(calqui_msgs)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   actionlib_msgs
-  roscpp
-  rospy
   std_msgs
 )
 
@@ -24,7 +22,6 @@ find_package(catkin REQUIRED COMPONENTS
  generate_messages(
    DEPENDENCIES
    actionlib_msgs
-   std_msgs
  )
 
 ###################################
