@@ -20,5 +20,6 @@ catkin_package(
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
   scripts/goto_server.py
+  scripts/circle.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
