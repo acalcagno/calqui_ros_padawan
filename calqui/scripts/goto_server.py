@@ -67,7 +67,6 @@ class GoToServer:
         fb.distance_to_goal = self.distance_to_goal()
         self._as.publish_feedback(fb)
 
-
     def distance_to_goal(self):
         return math.sqrt(math.pow((self._goal_pose.y - self._current_pose.y),2) + math.pow((self._goal_pose.x - self._current_pose.x),2))
 
@@ -83,9 +82,13 @@ class GoToServer:
     def deviation(self):
         return self._current_pose.theta - self.angle_to_goal()
 
-    # do we consider that we reached the goal
+    # do we consider that goal succeeded
     def goal_was_reached(self):
-        return self._current_pose and self._goal_pose and self.distance_to_goal() < 0.5 and self.angle_to_goal < 0.5
+        return self.goal_position_reached() and numpy.abs(self.deviation()) < 0.5
+
+    # we are in the position of the goal (don't know about the goal angle)
+    def goal_position_reached(self):
+        return self._current_pose and self._goal_pose and self.distance_to_goal() < 0.5
 
     def calculate_angular_speed(self):
         if numpy.abs(self.deviation()) < 0.1 or self.goal_was_reached():
@@ -98,7 +101,7 @@ class GoToServer:
         return rotation_speed
 
     def calculate_linear_speed(self):
-        if self.goal_was_reached() or numpy.abs(self.deviation()) > 0.5:
+        if self.goal_position_reached() or numpy.abs(self.deviation()) > 0.5:
             return 0
         return self._speed
 
@@ -106,7 +109,7 @@ class GoToServer:
         # rospy.loginfo('current pose {} -> goal {}'.format(self._current_pose, self._goal_pose))
         msg = Twist()
         angular_speed = self.calculate_angular_speed()
-        linear_speed = self.calculate_linear_speed(angular_speed)
+        linear_speed = self.calculate_linear_speed()
         msg.linear.x = linear_speed
         msg.linear.y = 0
         msg.linear.z = 0
