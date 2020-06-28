@@ -20,6 +20,7 @@ from tf.transformations import euler_from_quaternion, quaternion_from_euler
 class GoToServer:
     def __init__(self):
         rospy.on_shutdown(self.on_shutdown)
+        self._reset_flags()
         self._as = actionlib.SimpleActionServer('/goto_place', 
                 GoToPlaceAction, execute_cb=self.on_goal, auto_start=False)
         self._vel_pub = rospy.Publisher("/cmd_vel", Twist, queue_size=10)
@@ -32,14 +33,19 @@ class GoToServer:
         
         rospy.loginfo('Simple Action Server has been started')
 
+    def _reset_flags(self):
+        self._rotating = False
+        self._going_forward = False
+        self._goal_position_reached = False
+
+
     def cfg_callback(self, config, level):
         rospy.loginfo("""Reconfigure Request:  {calqui_SPEED}""".format(**config))
         self._speed = config.calqui_SPEED
-
         return config
 
     def on_shutdown(self):
-        rospy.loginfo('stopping vel')  
+        rospy.loginfo('on shutdown')  
         self.set_vel(0,0)
 
     def on_odom(self, msg):
@@ -51,7 +57,6 @@ class GoToServer:
         self._current_pose.theta = yaw
 
     def set_vel(self, linear_x, angular_z):
-        rospy.loginfo('publishing vel')
         msg = Twist()
         msg.linear.x = linear_x
         msg.linear.y = 0
@@ -59,10 +64,11 @@ class GoToServer:
         msg.angular.x = 0
         msg.angular.y = 0
         msg.angular.z = angular_z
+        self.log_angular_speed(angular_z)
+        self.log_linear_speed(linear_x)
         self._vel_pub.publish(msg)
 
     def send_feedback(self):
-        # rospy.loginfo('current pose is {}'.format(self._current_pose))
         fb = GoToPlaceFeedback()
         fb.distance_to_goal = self.distance_to_goal()
         self._as.publish_feedback(fb)
@@ -82,31 +88,77 @@ class GoToServer:
     def deviation(self):
         return self._current_pose.theta - self.angle_to_goal()
 
+    def _log_goal_position_reached(self, reached):
+        if not reached:
+            return
+        if not self._goal_position_reached:
+            self._goal_position_reached = True
+            rospy.loginfo('goal position reached, rotating to goal orientation')
+
     # do we consider that goal succeeded
     def goal_was_reached(self):
-        return self.goal_position_reached() and numpy.abs(self.deviation()) < 0.5
+        return self.goal_position_reached() and self.angle_matches_goal_angle()
 
     # we are in the position of the goal (don't know about the goal angle)
     def goal_position_reached(self):
-        return self._current_pose and self._goal_pose and self.distance_to_goal() < 0.5
+        reached = self._current_pose and self._goal_pose and self.distance_to_goal() < 0.5
+        self._log_goal_position_reached(reached)
+        return reached
 
     def calculate_angular_speed(self):
-        if numpy.abs(self.deviation()) < 0.1 or self.goal_was_reached():
-            rotation_speed = 0
-        else:
-            rotation_speed = self._speed * -0.5 * self.deviation()
+        # when goal has succedded, stop
+        if self.goal_was_reached():
+            rospy.loginfo('Goal completed')  
+            return 0
 
-        rospy.loginfo('rotation_speed {}'.format(rotation_speed))
-        rospy.loginfo('angle_to_goal {}, current_angle {}'.format(self.angle_to_goal(), self._current_pose.theta))
-        return rotation_speed
+        # when not close to the goal position
+        if not self.goal_position_reached():
+            # and robot is facing the goal position, don't rotate
+            if numpy.abs(self.deviation()) < 0.1:
+                return 0
+            else:
+                # robot is not close to goal position, and also not facing it, correct the angle
+                return self._speed * -0.5 * self.deviation()
+
+        # robot is in the right spot, and with the correct angle. Stop
+        if self.angle_matches_goal_angle():
+            return 0
+
+        # robot is in the right spot, but with incorrect angle
+        return self._speed * -0.5
+
+    def angle_matches_goal_angle(self):
+        return numpy.abs(self._goal_pose.theta - self._current_pose.theta) < 0.2
 
     def calculate_linear_speed(self):
         if self.goal_position_reached() or numpy.abs(self.deviation()) > 0.5:
             return 0
         return self._speed
 
+    def log_linear_speed(self, linear_speed):
+        if linear_speed == 0:
+            if self._going_forward:
+                rospy.loginfo('stopped going forward')
+            self._going_forward = False
+        else:
+            if not self._going_forward:
+                rospy.loginfo('started going forward')
+            self._going_forward = True
+
+    def log_angular_speed(self, angular_speed):
+        if angular_speed == 0:
+            if self._rotating:
+                rospy.loginfo('stopping rotation')
+            self._rotating = False
+        else:
+            if not self._rotating:
+                if angular_speed < 0:
+                    rospy.loginfo('starting rotation right')
+                else:
+                    rospy.loginfo('starting rotation left')
+            self._rotating = True
+
     def calculate_vel(self):
-        # rospy.loginfo('current pose {} -> goal {}'.format(self._current_pose, self._goal_pose))
         msg = Twist()
         angular_speed = self.calculate_angular_speed()
         linear_speed = self.calculate_linear_speed()
@@ -120,6 +172,7 @@ class GoToServer:
 
     def on_goal(self, goal):
         rospy.loginfo('a goal has been received! {}'.format(goal))
+        self._reset_flags()
 
         self._goal_pose = Pose2D()
         self._goal_pose.x = goal.x
@@ -138,7 +191,7 @@ class GoToServer:
             rate.sleep()
 
 
-        rospy.loginfo('goal reached!')
+        rospy.loginfo('Program finished!')
         self.set_vel(0.0, 0.0)
         result = GoToPlaceResult()
         result.x = self._current_pose.x
