@@ -6,9 +6,9 @@
   
   <!-- does not allow empty ns attrubte
   <include file="$(find turtlebot3_gazebo)/launch/multi_turtlebot3_slam.launch">
-    <arg name="ns" value="" />
-  </include >
-  -->
+    <arg name="ns" value=" "  />
+  </include >-->
+  
   <arg name="ns" default=""/>
   <node pkg="gmapping" type="slam_gmapping" name="turtlebot3_slam_gmapping" output="screen">
     <param name="base_frame" value="$(arg ns)/base_footprint"/>
@@ -44,7 +44,6 @@
     <param name="lasamplerange" value="0.005"/>
     <param name="lasamplestep" value="0.005"/>
   </node>
-
 
 
 </launch>

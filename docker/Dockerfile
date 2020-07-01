@@ -61,6 +61,8 @@ RUN echo "export QT_X11_NO_MITSHM=1" >> /home/agustin/.bashrc
 RUN yes | sudo apt-get install ros-melodic-turtlebot3
 RUN yes | sudo apt-get install ros-melodic-turtlebot3-simulations
 RUN yes | sudo apt-get install vim
+RUN yes | sudo apt-get install ros-melodic-slam-gmapping
+
 
 RUN usermod -a -G video agustin
 RUN usermod -a -G dialout agustin
